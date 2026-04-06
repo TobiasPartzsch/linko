@@ -86,6 +86,10 @@ func requestLogger(logger *slog.Logger) func(http.Handler) http.Handler {
 			if logCtx.Username != "" {
 				attrs = append(attrs, slog.String("user", logCtx.Username))
 			}
+			if logCtx.Error != nil {
+				attrs = append(attrs, slog.Any("error", logCtx.Error))
+			}
+
 			logger.Info("Served request", attrs...)
 		})
 	}
@@ -135,4 +139,12 @@ const logContextKey contextKey = "log_context"
 
 type LogContext struct {
 	Username string
+	Error    error
+}
+
+func httpError(ctx context.Context, w http.ResponseWriter, status int, err error) {
+	if logCtx, ok := ctx.Value(logContextKey).(*LogContext); ok {
+		logCtx.Error = err
+	}
+	http.Error(w, err.Error(), status)
 }
